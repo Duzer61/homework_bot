@@ -3,7 +3,7 @@ import os
 import requests
 import time
 import telegram
-#from telegram import ReplyKeyboardMarkup
+# from telegram import ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Updater
 from dotenv import load_dotenv
 from exceptions import NoTokenException
@@ -28,7 +28,10 @@ HOMEWORK_VERDICTS = {
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO)
+    level=logging.DEBUG,
+    filename='main.log',
+    filemode='a')
+
 
 def check_tokens():
     """Проверяет доступность переменных окружения"""
@@ -44,30 +47,40 @@ def check_tokens():
 
 
 def send_message(bot, message):
-    ...
+    """Отправляет сообщение в Telegram чат."""
+    bot.send_message(
+        chat_id=TELEGRAM_CHAT_ID,
+        text=message
+    )
 
 
 def get_api_answer(timestamp):
-    """Запрашивает эндпоинт API-сервиса Яндекс.Домашка"""
+    """Запрашивает эндпоинт API-сервиса Яндекс.Домашка."""
     payload = {'from_date': timestamp}
     try:
-        homework_statuses = requests.get(ENDPOINT, headers=HEADERS, params=payload)
+        response = requests.get(ENDPOINT, headers=HEADERS,
+                                params=payload)
     except Exception as error:
         logging.error(f'Ошибка при запросе к основному API: {error}')
-        response = None
-        return response
-    return homework_statuses.json()
+        return False
+    return response.json()
 
 
 def check_response(response):
-    """Проверяет ответ API на соответствие документации"""
-    ...
+    """
+    Проверяет ответ API на соответствие документации.
+    Извлекает данные о проверках домашних работ.
+    """
+    # НАПИСАТЬ ПРОВЕРКУ!!!!
+    homeworks = response.get('homeworks')
+    return homeworks
 
 
 def parse_status(homework):
-    """Извлекает статус домашней работы из ответа API"""
-    ...
-
+    """Извлекает статус домашней работы из ответа API."""
+    homework_name = homework['homework_name']
+    homework_status = homework['status']
+    verdict = HOMEWORK_VERDICTS[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -86,8 +99,18 @@ def main():
 
     while True:
         try:
+            response = get_api_answer(timestamp)
+            homeworks = check_response(response)
+            if homeworks:
+                if homeworks[0]:
+                    message = parse_status(homeworks[0])
+                    send_message(message)
 
-            ...
+
+                else:
+                    pass
+
+
 
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
