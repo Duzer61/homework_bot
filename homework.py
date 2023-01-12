@@ -1,13 +1,17 @@
 import logging
 import os
 import requests
+import sys
 import time
 import telegram
 # from telegram import ReplyKeyboardMarkup
-from telegram.ext import CommandHandler, Updater
+#from telegram.ext import CommandHandler, Updater
 from dotenv import load_dotenv
 from exceptions import NoTokenException
+#from logging.handlers import StreamHandler
 
+#handler = StreamHandler(stream=sys.stdout)
+#logger.addHandler(handler)
 load_dotenv()
 # secret_token = os.getenv('TOKEN')
 
@@ -15,7 +19,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-RETRY_PERIOD = 600
+RETRY_PERIOD = 60
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
@@ -26,21 +30,30 @@ HOMEWORK_VERDICTS = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.DEBUG,
-    filename='main.log',
-    filemode='a')
+#logging.basicConfig(
+#    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#    level=logging.DEBUG,
+#    filemode='a',
+#    handler=StreamHandler(stream=sys.stdout)
+#)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+handler = logging.StreamHandler(stream=sys.stdout)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 def check_tokens():
-    """Проверяет доступность переменных окружения"""
+    """Проверяет доступность переменных окружения."""
     tokens = {
         'PRACTICUM_TOKEN - токен Практикум.Домашка': PRACTICUM_TOKEN,
         'TELEGRAM_TOKEN - токен бота Telegram': TELEGRAM_TOKEN,
-        'TELEGRAM_CHAT_ID - id аккаунта Telegram': TELEGRAM_CHAT_ID
+        'TELEGRAM_CHAT_ID - id аккаунта Telegram': TELEGRAM_CHAT_ID,
     }
-    for token_description, token in tokens:
+    for token_description, token in tokens.items():
         if token is None:
             return False
     return True
@@ -52,6 +65,7 @@ def send_message(bot, message):
         chat_id=TELEGRAM_CHAT_ID,
         text=message
     )
+    logger.debug(f'Сообщение отправлено в Телеграм: {message}')
 
 
 def get_api_answer(timestamp):
@@ -93,7 +107,7 @@ def main():
     ...
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = int(time.time())
+    timestamp = int(time.time()) - 2600000
 
     ...
 
@@ -104,7 +118,7 @@ def main():
             if homeworks:
                 if homeworks[0]:
                     message = parse_status(homeworks[0])
-                    send_message(message)
+                    send_message(bot, message)
 
 
                 else:
@@ -115,7 +129,10 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             ...
-        ...
+        #...
+
+        finally:
+            time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
