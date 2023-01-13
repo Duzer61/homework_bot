@@ -63,11 +63,17 @@ def check_tokens():
 
 def send_message(bot, message):
     """Отправляет сообщение в Telegram чат."""
-    bot.send_message(
-        chat_id=TELEGRAM_CHAT_ID,
-        text=message
-    )
-    logger.debug(f'В Телеграм отправлено сообщение: {message}')
+    try:
+        bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text=message
+        )
+    except telegram.error.TelegramError as error:
+        logger.error(f'сбой при отправке сообщения: {message} - {error}')
+    else:
+        logger.debug(f'В Телеграм отправлено сообщение: {message}')
+    finally:
+        return
 
 
 def get_api_answer(timestamp):
@@ -108,28 +114,26 @@ def main():
             'Выполнение программы остановлено.'
         )
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = int(time.time()) - 2600000
+    timestamp = int(time.time())
     old_message = ''
 
     while True:
         try:
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
-            if homeworks:
-                if homeworks[0]:
+            if homeworks is not None:
+                if len(homeworks):
                     message = parse_status(homeworks[0])
                     if message != old_message:
                         old_message = message
                         send_message(bot, message)
                 else:
-                    pass
-
-
+                    message = 'Статус работы пока не менялся.'
+                    if message != old_message:
+                        old_message = message
+                        send_message(bot, message)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            ...
-        #...
-
         finally:
             time.sleep(RETRY_PERIOD)
 
