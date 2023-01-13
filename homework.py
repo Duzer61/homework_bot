@@ -19,7 +19,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-RETRY_PERIOD = 60
+RETRY_PERIOD = 10
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
@@ -39,7 +39,7 @@ HOMEWORK_VERDICTS = {
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    '%(asctime)s - %(levelname)s - %(message)s'
 )
 handler = logging.StreamHandler(stream=sys.stdout)
 handler.setFormatter(formatter)
@@ -49,12 +49,14 @@ logger.addHandler(handler)
 def check_tokens():
     """Проверяет доступность переменных окружения."""
     tokens = {
-        'PRACTICUM_TOKEN - токен Практикум.Домашка': PRACTICUM_TOKEN,
-        'TELEGRAM_TOKEN - токен бота Telegram': TELEGRAM_TOKEN,
-        'TELEGRAM_CHAT_ID - id аккаунта Telegram': TELEGRAM_CHAT_ID,
+        '<PRACTICUM_TOKEN> (токен Практикум.Домашка)': PRACTICUM_TOKEN,
+        '<TELEGRAM_TOKEN> (токен бота Telegram)': TELEGRAM_TOKEN,
+        '<TELEGRAM_CHAT_ID> (id аккаунта Telegram)': TELEGRAM_CHAT_ID,
     }
     for token_description, token in tokens.items():
         if token is None:
+            logger.critical(f'Отсутствует токен {token_description} '
+                            f'в файле .env')
             return False
     return True
 
@@ -65,7 +67,7 @@ def send_message(bot, message):
         chat_id=TELEGRAM_CHAT_ID,
         text=message
     )
-    logger.debug(f'Сообщение отправлено в Телеграм: {message}')
+    logger.debug(f'В Телеграм отправлено сообщение: {message}')
 
 
 def get_api_answer(timestamp):
@@ -101,15 +103,13 @@ def parse_status(homework):
 def main():
     """Основная логика работы бота."""
     if not check_tokens():
-        raise NoTokenException('Нет одного из необходимых токенов.\
-                                Выполнение программы остановлено')
-
-    ...
-
+        raise NoTokenException(
+            'Отсутствует один из необходимых токенов. '
+            'Выполнение программы остановлено.'
+        )
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time()) - 2600000
-
-    ...
+    old_message = ''
 
     while True:
         try:
@@ -118,12 +118,11 @@ def main():
             if homeworks:
                 if homeworks[0]:
                     message = parse_status(homeworks[0])
-                    send_message(bot, message)
-
-
+                    if message != old_message:
+                        old_message = message
+                        send_message(bot, message)
                 else:
                     pass
-
 
 
         except Exception as error:
