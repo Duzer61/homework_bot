@@ -5,13 +5,13 @@ import sys
 import time
 import telegram
 # from telegram import ReplyKeyboardMarkup
-#from telegram.ext import CommandHandler, Updater
+# from telegram.ext import CommandHandler, Updater
 from dotenv import load_dotenv
-from exceptions import NoTokenException
-#from logging.handlers import StreamHandler
+from exceptions import NoTokenException, NotCorrectResponse
+# from logging.handlers import StreamHandler
 
-#handler = StreamHandler(stream=sys.stdout)
-#logger.addHandler(handler)
+# handler = StreamHandler(stream=sys.stdout)
+# logger.addHandler(handler)
 load_dotenv()
 # secret_token = os.getenv('TOKEN')
 
@@ -30,12 +30,12 @@ HOMEWORK_VERDICTS = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-#logging.basicConfig(
+# logging.basicConfig(
 #    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 #    level=logging.DEBUG,
 #    filemode='a',
 #    handler=StreamHandler(stream=sys.stdout)
-#)
+# )
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
@@ -93,9 +93,16 @@ def check_response(response):
     Проверяет ответ API на соответствие документации.
     Извлекает данные о проверках домашних работ.
     """
-    # НАПИСАТЬ ПРОВЕРКУ!!!!
-    homeworks = response.get('homeworks')
-    return homeworks
+    print('Проверяем response')
+    if (isinstance(response, dict)
+        and 'homeworks' in response
+            and isinstance(response['homeworks'], list)):
+        print(type(response))
+        homeworks = response.get('homeworks')
+        return homeworks
+    else:
+        logger.error('Ответ от API не соответствует ожидаемому.')
+        return False
 
 
 def parse_status(homework):
@@ -114,24 +121,39 @@ def main():
             'Выполнение программы остановлено.'
         )
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = int(time.time())
+    timestamp = int(time.time()) - 2600000
     old_message = ''
 
     while True:
         try:
             response = get_api_answer(timestamp)
-            homeworks = check_response(response)
-            if homeworks is not None:
-                if len(homeworks):
-                    message = parse_status(homeworks[0])
-                    if message != old_message:
-                        old_message = message
-                        send_message(bot, message)
+            if response:
+                homeworks = check_response(response)
+                if homeworks:
+                    if len(homeworks):
+                        message = parse_status(homeworks[0])
+                        if message != old_message:
+                            old_message = message
+                            send_message(bot, message)
+                    else:
+                        message = 'Статус работы пока не менялся.'
+                        if message != old_message:
+                            old_message = message
+                            send_message(bot, message)
                 else:
-                    message = 'Статус работы пока не менялся.'
+                    message = ('Ответ от API Яндекс.Домашки не соответствует '
+                               'ожидаемому. Выполнение программы продолжено, '
+                               'но возможно требуется вмешательство.')
                     if message != old_message:
                         old_message = message
                         send_message(bot, message)
+            else:
+                message = ('Произошла ошибка при запросе'
+                           'к основному API Яндекс.Домашки')
+                if message != old_message:
+                    old_message = message
+                    send_message(bot, message)
+
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
         finally:
