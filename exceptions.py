@@ -11,6 +11,12 @@ class NotCorrectResponse(Exception):
 
 
 class StatusCodeNotOk(Exception):
-    """Ответ от API не содержит код 200"""
+    """Ответ от API не содержит код 200."""
+
+    pass
+
+
+class NotCorrectKey(Exception):
+    """В ответе от API нет ключа homeworks."""
 
     pass

@@ -8,6 +8,7 @@ import telegram
 # from telegram.ext import CommandHandler, Updater
 from dotenv import load_dotenv
 from exceptions import NoTokenException, NotCorrectResponse, StatusCodeNotOk
+from exceptions import NotCorrectKey
 from http import HTTPStatus
 # from logging.handlers import StreamHandler
 
@@ -20,7 +21,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-RETRY_PERIOD = 10
+RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
@@ -102,22 +103,45 @@ def check_response(response):
     Извлекает данные о проверках домашних работ.
     """
     logger.debug('Проверяем response')
-    if (isinstance(response, dict)
-        and 'homeworks' in response
-            and isinstance(response['homeworks'], list)):
-        print(type(response))
-        homeworks = response.get('homeworks')
-        print(homeworks)
-        return homeworks
-    else:
-        logger.error('Ответ от API не соответствует ожидаемому.')
-        return False
+    if not isinstance(response, dict):
+        logger.error(f'Структура данных API не соответствует ожиданию. '
+                     f'Получен {type(response)} вместо <dict>')
+        raise TypeError('В ответе API не получен словарь.')
+    elif 'homeworks' not in response:
+        logger.error('В ответе API нет ключа <homeworks>.')
+        raise NotCorrectKey('В ответе API нет ключа <homeworks>.')
+    elif not isinstance(response['homeworks'], list):
+        logger.error(f'Структура данных API не соответствует ожиданию. '
+                     f'Получен {type(response["homeworks"])} вместо <list>')
+        raise TypeError('В ответе API не получен список.')
+    homeworks = response.get('homeworks')
+    return homeworks
+    # if (isinstance(response, dict)
+    #     and 'homeworks' in response
+    #         and isinstance(response['homeworks'], list)):
+    #     print(type(response))
+    #     homeworks = response.get('homeworks')
+    #     print(homeworks)
+    #     return homeworks
+    # else:
+    #     logger.error('Ответ от API не соответствует ожидаемому.')
+    #     return False
 
 
 def parse_status(homework):
     """Извлекает статус домашней работы из ответа API."""
+    if 'homework_name' not in homework:
+        logger.error('В ответе отсутствует имя домашней работы. '
+                     '"homework_name"')
+        raise KeyError('В ответе отсутствует имя домашней работы.')
     homework_name = homework['homework_name']
+    if 'status' not in homework:
+        logger.error('В ответе отсутствует ключ статуса работы.')
+        raise KeyError('В ответе отсутствует ключ статуса работы.')
     homework_status = homework['status']
+    if homework_status not in HOMEWORK_VERDICTS:
+        logger.error('Неизвестный статус работы')
+        raise KeyError('Неизвестный статус работы')
     verdict = HOMEWORK_VERDICTS[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -130,7 +154,7 @@ def main():
             'Выполнение программы остановлено.'
         )
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = int(time.time()) - 2600000
+    timestamp = int(time.time())
     old_message = ''
 
     while True:
