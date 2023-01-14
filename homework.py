@@ -7,7 +7,8 @@ import telegram
 # from telegram import ReplyKeyboardMarkup
 # from telegram.ext import CommandHandler, Updater
 from dotenv import load_dotenv
-from exceptions import NoTokenException, NotCorrectResponse
+from exceptions import NoTokenException, NotCorrectResponse, StatusCodeNotOk
+from http import HTTPStatus
 # from logging.handlers import StreamHandler
 
 # handler = StreamHandler(stream=sys.stdout)
@@ -82,10 +83,17 @@ def get_api_answer(timestamp):
     try:
         response = requests.get(ENDPOINT, headers=HEADERS,
                                 params=payload)
+        if response.status_code != HTTPStatus.OK:
+            logger.error(f'Сервер вернул статус код {response.status_code}. '
+                         f'Должен быть код 200.')
+            raise StatusCodeNotOk(f'Сервер вернул код {response.status_code}. '
+                                  f'Должен быть код 200')
+        return response.json()
+    except NotCorrectResponse():
+        pass
     except Exception as error:
         logging.error(f'Ошибка при запросе к основному API: {error}')
-        return False
-    return response.json()
+        # raise NotCorrectResponse('Ответ от API не соответствует ожидаемому')
 
 
 def check_response(response):
@@ -93,12 +101,13 @@ def check_response(response):
     Проверяет ответ API на соответствие документации.
     Извлекает данные о проверках домашних работ.
     """
-    print('Проверяем response')
+    logger.debug('Проверяем response')
     if (isinstance(response, dict)
         and 'homeworks' in response
             and isinstance(response['homeworks'], list)):
         print(type(response))
         homeworks = response.get('homeworks')
+        print(homeworks)
         return homeworks
     else:
         logger.error('Ответ от API не соответствует ожидаемому.')
@@ -125,11 +134,12 @@ def main():
     old_message = ''
 
     while True:
+        logger.info('Запрашиваем статус домашки')
         try:
             response = get_api_answer(timestamp)
             if response:
                 homeworks = check_response(response)
-                if homeworks:
+                if homeworks is not False:
                     if len(homeworks):
                         message = parse_status(homeworks[0])
                         if message != old_message:
