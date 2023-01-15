@@ -13,7 +13,11 @@ class NotCorrectResponse(Exception):
 class StatusCodeNotOk(Exception):
     """Ответ от API не содержит код 200."""
 
-    pass
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return f'Должен быть код 200. Сервер вернул статус код: {self.value}.'
 
 
 class NotCorrectKey(Exception):

@@ -21,8 +21,8 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-RETRY_PERIOD = 600
-ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
+RETRY_PERIOD = 10
+ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses1/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
@@ -78,23 +78,35 @@ def send_message(bot, message):
         return
 
 
+# def get_api_answer(timestamp):
+#     """Запрашивает эндпоинт API-сервиса Яндекс.Домашка."""
+#     payload = {'from_date': timestamp}
+#     try:
+#         response = requests.get(ENDPOINT, headers=HEADERS,
+#                                 params=payload)
+#         if response.status_code != HTTPStatus.OK:
+#             raise StatusCodeNotOk('Ошибка')
+#     except StatusCodeNotOk as error:
+#         logger.error(f'{error}{response.status_code}.')
+#         return False
+#     except Exception as error:
+#         logging.error(f'Ошибка при запросе к основному API: {error}')
+#         return False
+#     else:
+#         return response.json()
 def get_api_answer(timestamp):
     """Запрашивает эндпоинт API-сервиса Яндекс.Домашка."""
     payload = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS,
                                 params=payload)
-        if response.status_code != HTTPStatus.OK:
-            logger.error(f'Сервер вернул статус код {response.status_code}. '
-                         f'Должен быть код 200.')
-            raise StatusCodeNotOk(f'Сервер вернул код {response.status_code}. '
-                                  f'Должен быть код 200')
-        return response.json()
-    except NotCorrectResponse():
-        pass
-    except Exception as error:
-        logging.error(f'Ошибка при запросе к основному API: {error}')
-        # raise NotCorrectResponse('Ответ от API не соответствует ожидаемому')
+        if response.status_code == HTTPStatus.OK:
+            return response.json()
+        else:
+            raise StatusCodeNotOk(response.status_code)
+    except requests.RequestException as error:
+        logger.error(f'Ошибка при запросе к основному API: {error}')
+        # return False
 
 
 def check_response(response):
@@ -115,7 +127,10 @@ def check_response(response):
                      f'Получен {type(response["homeworks"])} вместо <list>')
         raise TypeError('В ответе API не получен список.')
     homeworks = response.get('homeworks')
-    return homeworks
+    if homeworks != []:
+        return homeworks
+    return False
+
     # if (isinstance(response, dict)
     #     and 'homeworks' in response
     #         and isinstance(response['homeworks'], list)):
@@ -161,35 +176,24 @@ def main():
         logger.info('Запрашиваем статус домашки')
         try:
             response = get_api_answer(timestamp)
-            if response:
-                homeworks = check_response(response)
-                if homeworks is not False:
-                    if len(homeworks):
-                        message = parse_status(homeworks[0])
-                        if message != old_message:
-                            old_message = message
-                            send_message(bot, message)
-                    else:
-                        message = 'Статус работы пока не менялся.'
-                        if message != old_message:
-                            old_message = message
-                            send_message(bot, message)
-                else:
-                    message = ('Ответ от API Яндекс.Домашки не соответствует '
-                               'ожидаемому. Выполнение программы продолжено, '
-                               'но возможно требуется вмешательство.')
-                    if message != old_message:
-                        old_message = message
-                        send_message(bot, message)
-            else:
-                message = ('Произошла ошибка при запросе'
-                           'к основному API Яндекс.Домашки')
+            homeworks = check_response(response)
+            if homeworks:
+                message = parse_status(homeworks[0])
                 if message != old_message:
                     old_message = message
                     send_message(bot, message)
-
+            else:
+                message = 'Статус работы пока не менялся.'
+                if message != old_message:
+                    old_message = message
+                    send_message(bot, message)
         except Exception as error:
-            message = f'Сбой в работе программы: {error}'
+            logger.error(f'Сбой в работе программы: {error}')
+            message = (f'Сбой в работе программы: {error} Работа '
+                       f'будет продолжена, но возможно нужно вмешаться.')
+            if message != old_message:
+                old_message = message
+                send_message(bot, message)
         finally:
             time.sleep(RETRY_PERIOD)
 
