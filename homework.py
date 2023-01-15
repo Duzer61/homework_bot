@@ -1,12 +1,14 @@
 import logging
 import os
-import requests
 import sys
 import time
+from http import HTTPStatus
+
+import requests
 import telegram
 from dotenv import load_dotenv
+
 from exceptions import NoTokenException, StatusCodeNotOk
-from http import HTTPStatus
 
 load_dotenv()
 
@@ -85,12 +87,11 @@ def check_response(response):
     Проверяет ответ API на соответствие документации.
     Извлекает данные о проверках домашних работ.
     """
-    logger.debug('Проверяем response')
     if not isinstance(response, dict):
         raise TypeError(f'Структура данных API не соответствует ожиданию. '
                         f'Получен {type(response)} вместо <dict>')
     elif 'homeworks' not in response:
-        raise KeyError('В ответе API нет ключа <homeworks>.')
+        raise KeyError('В ответе API нет ключа <homeworks>')
     elif not isinstance(response['homeworks'], list):
         raise TypeError(f'Структура данных API не соответствует ожиданию. '
                         f'Получен {type(response["homeworks"])} вместо <list>')
