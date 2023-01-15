@@ -21,9 +21,9 @@
  - в файле .env прописать токены и ID вашего Telegram - чата
  
 
-     `TOKEN=здесь ваш токен для Telegram bot API`
-     `PRACTICUM_TOKEN=здесь ваш токен для Практикум.Домашка`
-     `TELEGRAM_CHAT_ID=здесь ID вашего чата Telegram`
+   -  `TOKEN=здесь ваш токен для Telegram bot API`
+   -  `PRACTICUM_TOKEN=здесь ваш токен для Практикум.Домашка`
+   -  `TELEGRAM_CHAT_ID=здесь ID вашего чата Telegram`
 
  - Запустить проект `python homework.py`
  
