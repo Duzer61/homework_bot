@@ -4,12 +4,6 @@ class NoTokenException(Exception):
     pass
 
 
-class NotCorrectResponse(Exception):
-    """Ответ от API не соответствует ожидаемому."""
-
-    pass
-
-
 class StatusCodeNotOk(Exception):
     """Ответ от API не содержит код 200."""
 
@@ -17,10 +11,4 @@ class StatusCodeNotOk(Exception):
         self.value = value
 
     def __str__(self):
-        return f'Должен быть код 200. Сервер вернул статус код: {self.value}.'
-
-
-class NotCorrectKey(Exception):
-    """В ответе от API нет ключа homeworks."""
-
-    pass
+        return f'Должен быть код 200. Сервер вернул статус код: {self.value}'
