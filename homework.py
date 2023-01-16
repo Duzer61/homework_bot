@@ -8,7 +8,7 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from exceptions import NoTokenException, StatusCodeNotOk
+from exceptions import StatusCodeNotOk
 
 load_dotenv()
 
@@ -66,12 +66,12 @@ def send_message(bot, message):
         logger.error(f'сбой при отправке сообщения: {message} - {error}')
     else:
         logger.debug(f'В Телеграм отправлено сообщение: {message}')
-    finally:
-        return
+    return
 
 
 def get_api_answer(timestamp):
     """Запрашивает эндпоинт API-сервиса Яндекс.Домашка."""
+    logger.debug('Делаем запрос к API')
     payload = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS,
@@ -92,15 +92,13 @@ def check_response(response):
     if not isinstance(response, dict):
         raise TypeError(f'Структура данных API не соответствует ожиданию. '
                         f'Получен {type(response)} вместо <dict>')
-    elif 'homeworks' not in response:
+    if 'homeworks' not in response:
         raise KeyError('В ответе API нет ключа <homeworks>')
-    elif not isinstance(response['homeworks'], list):
+    if not isinstance(response['homeworks'], list):
         raise TypeError(f'Структура данных API не соответствует ожиданию. '
                         f'Получен {type(response["homeworks"])} вместо <list>')
     homeworks = response.get('homeworks')
-    if homeworks != []:
-        return homeworks
-    return False
+    return homeworks
 
 
 def parse_status(homework):
@@ -124,7 +122,8 @@ def main():
         message = ('Отсутствует один или несколько необходимых токенов. '
                    'Выполнение программы остановлено.')
         logger.critical(message)
-        raise NoTokenException(message)
+        sys.exit(message)
+        # raise NoTokenException(message)
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     old_messages = []

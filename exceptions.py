@@ -1,9 +1,3 @@
-class NoTokenException(Exception):
-    """Отсутствует необходимый токен."""
-
-    pass
-
-
 class StatusCodeNotOk(Exception):
     """Ответ от API не содержит код 200."""
 
