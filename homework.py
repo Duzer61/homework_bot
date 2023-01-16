@@ -40,17 +40,19 @@ logger.addHandler(handler)
 
 def check_tokens():
     """Проверяет доступность переменных окружения."""
-    tokens = {
-        '<PRACTICUM_TOKEN> (токен Практикум.Домашка)': PRACTICUM_TOKEN,
-        '<TELEGRAM_TOKEN> (токен бота Telegram)': TELEGRAM_TOKEN,
-        '<TELEGRAM_CHAT_ID> (id аккаунта Telegram)': TELEGRAM_CHAT_ID,
-    }
-    for token_description, token in tokens.items():
-        if token is None:
-            logger.critical(f'Отсутствует токен {token_description} '
-                            f'в файле .env')
-            return False
-    return True
+    return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
+    # return all[tokens]
+    # tokens = {
+    #     '<PRACTICUM_TOKEN> (токен Практикум.Домашка)': PRACTICUM_TOKEN,
+    #     '<TELEGRAM_TOKEN> (токен бота Telegram)': TELEGRAM_TOKEN,
+    #     '<TELEGRAM_CHAT_ID> (id аккаунта Telegram)': TELEGRAM_CHAT_ID,
+    # }
+    # for token_description, token in tokens.items():
+    #     if token is None:
+    #         logger.critical(f'Отсутствует токен {token_description} '
+    #                         f'в файле .env')
+    #         return False
+    # return True
 
 
 def send_message(bot, message):
@@ -119,10 +121,10 @@ def parse_status(homework):
 def main():
     """Основная логика работы бота."""
     if not check_tokens():
-        raise NoTokenException(
-            'Отсутствует один из необходимых токенов. '
-            'Выполнение программы остановлено.'
-        )
+        message = ('Отсутствует один или несколько необходимых токенов. '
+                   'Выполнение программы остановлено.')
+        logger.critical(message)
+        raise NoTokenException(message)
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     old_messages = []
