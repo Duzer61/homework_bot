@@ -54,7 +54,6 @@ def send_message(bot, message):
         logger.error(f'сбой при отправке сообщения: {message} - {error}')
     else:
         logger.debug(f'В Телеграм отправлено сообщение: {message}')
-    return
 
 
 def get_api_answer(timestamp):
@@ -114,7 +113,9 @@ def main():
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
-    old_messages = []
+    old_messages = []  # Комментарий для ревьюера: Филипп, привет. Я в Пачке
+    # написал тебе почему здесь выбрал список, а не строку. Посмотри,
+    # пожалуйста. Или все-же надо исправить на str ?
 
     while True:
         logger.info('Запрашиваем статус домашки')
@@ -125,6 +126,7 @@ def main():
                 message = parse_status(homeworks[0])
                 send_message(bot, message)
                 timestamp = int(time.time())
+                old_messages = ['Начинаем отслеживать статус домашки.']
             else:
                 message = 'Начинаем отслеживать статус домашки.'
                 if message not in old_messages:
