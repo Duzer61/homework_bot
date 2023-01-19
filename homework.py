@@ -121,9 +121,8 @@ def main():
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
             if homeworks:
-                if message != old_messages:
-                    message = parse_status(homeworks[0])
-                    send_message(bot, message)
+                message = parse_status(homeworks[0])
+                send_message(bot, message)
                 timestamp = int(time.time())
         except Exception as error:
             logger.error(f'Сбой в работе программы: {error}.')
